@@ -7,6 +7,7 @@ using LizardBot.Common.Utils;
 using LizardBot.Data;
 using LizardBot.DiscordBot;
 using LizardBot.DiscordBot.DiscordHandler;
+using LizardBot.DiscordBot.Service;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,5 +45,10 @@ builder.Services.AddDbContext<LizardBotDbContext>(options => options.UseNpgsql(c
 
 builder.Services.AddHostedService<CommandHandler>();
 builder.Services.AddHostedService<ChatBotHandler>();
+
+builder.Services.AddRestClients(builder.Configuration.GetSection("ChatGPT"));
+
+builder.Services.AddTransient<GeneralService>();
+builder.Services.AddTransient<ChatBotService>();
 
 await builder.Build().RunAsync();
