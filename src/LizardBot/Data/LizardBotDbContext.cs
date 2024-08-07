@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using LizardBot.Data.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace LizardBot.Data
 {
@@ -8,5 +9,10 @@ namespace LizardBot.Data
     public class LizardBotDbContext(DbContextOptions options)
         : DbContext(options)
     {
+        public DbSet<User> Users { get; set; }
+
+        public DbSet<BotChannel> BotChannels { get; set; }
+
+        public DbSet<Model.GptThreadSet> GptThreads { get; set; }
     }
 }

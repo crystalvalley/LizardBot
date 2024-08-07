@@ -1,4 +1,5 @@
 ﻿using Discord.Commands;
+using LizardBot.WebClient.ChatGpt;
 
 namespace LizardBot.DiscordBot.Command
 {
@@ -7,6 +8,13 @@ namespace LizardBot.DiscordBot.Command
     /// </summary>
     public class PingCommand : ModuleBase<SocketCommandContext>
     {
+        private readonly ChatGptRestClient _client;
+
+        public PingCommand(ChatGptRestClient client)
+        {
+            _client = client;
+        }
+
         /// <summary>
         /// ping을 받으면 pong을 돌려줌.
         /// </summary>
