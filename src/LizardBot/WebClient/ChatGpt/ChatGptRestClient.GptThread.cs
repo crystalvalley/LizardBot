@@ -17,7 +17,7 @@ namespace LizardBot.WebClient.ChatGpt
         /// <see href="https://platform.openai.com/docs/api-reference/threads/createThread"/>.
         /// </summary>
         /// <returns>생성된 스레드 반환.</returns>
-        public async Task<GptThread?> CreateThreadAsync()
+        public async Task<GptThreadObj?> CreateThreadAsync()
         {
             var request = new RestRequest("/v1/threads");
             request
@@ -27,7 +27,7 @@ namespace LizardBot.WebClient.ChatGpt
 
             var response = await _client.PostAsync(request);
             ArgumentNullException.ThrowIfNull(response.Content);
-            return JsonConvert.DeserializeObject<GptThread>(response.Content);
+            return JsonConvert.DeserializeObject<GptThreadObj>(response.Content);
         }
     }
 }

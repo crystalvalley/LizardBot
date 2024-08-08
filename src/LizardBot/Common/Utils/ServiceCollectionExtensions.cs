@@ -30,7 +30,7 @@ namespace LizardBot.Common.Utils
 
         public static IServiceCollection AddRestClients(this IServiceCollection collection, IConfigurationSection config)
         {
-            collection.AddTransient(_ =>
+            collection.AddSingleton(_ =>
             {
                 var option = new ChatGptRestClientConfiguration()
                 {
@@ -43,7 +43,7 @@ namespace LizardBot.Common.Utils
                 };
                 return new RestClientWrapper<ChatGptRestClientConfiguration>(option);
             });
-            collection.AddScoped<ChatGptRestClient>();
+            collection.AddSingleton<ChatGptRestClient>();
             return collection;
         }
     }

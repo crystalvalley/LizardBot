@@ -9,10 +9,10 @@ namespace LizardBot.Data
     public class LizardBotDbContext(DbContextOptions options)
         : DbContext(options)
     {
-        public DbSet<User> Users { get; set; }
+        public DbSet<PlatformUser> Users { get; set; }
 
         public DbSet<BotChannel> BotChannels { get; set; }
 
-        public DbSet<Model.GptThreadSet> GptThreads { get; set; }
+        public DbSet<GptThread> GptThreads { get; set; }
     }
 }

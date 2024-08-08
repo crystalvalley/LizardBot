@@ -12,8 +12,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var builder = Host.CreateApplicationBuilder();
+
+builder.Services.AddLogging(builder => builder.AddConsole());
 
 builder.Services.AddSingleton<LizardBotClient>(provider => new(
     new DiscordSocketConfig()
@@ -41,14 +44,14 @@ var connectionString = (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
         builder.Configuration.GetConnectionString("PsqlLocal")
         : builder.Configuration.GetConnectionString("PsqlPrd")) ?? throw new NoSettingDataException("ConnectionString");
 
-builder.Services.AddDbContext<LizardBotDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContextFactory<LizardBotDbContext>(options => options.UseNpgsql(connectionString));
 
 builder.Services.AddHostedService<CommandHandler>();
 builder.Services.AddHostedService<ChatBotHandler>();
 
 builder.Services.AddRestClients(builder.Configuration.GetSection("ChatGPT"));
 
-builder.Services.AddTransient<GeneralService>();
-builder.Services.AddTransient<ChatBotService>();
+builder.Services.AddSingleton<GeneralService>();
+builder.Services.AddSingleton<ChatBotService>();
 
 await builder.Build().RunAsync();

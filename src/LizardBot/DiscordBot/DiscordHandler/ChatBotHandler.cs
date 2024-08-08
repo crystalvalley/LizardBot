@@ -1,5 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using LizardBot.Common.Enums;
+using LizardBot.Data.Model;
 using LizardBot.DiscordBot.Service;
 using LizardBot.WebClient.ChatGpt;
 using Microsoft.Extensions.Hosting;
@@ -12,24 +14,33 @@ namespace LizardBot.DiscordBot.DiscordHandler
         private readonly ILogger _logger;
         private readonly LizardBotClient _client;
         private readonly ChatBotService _chatBotService;
+        private readonly GeneralService _generalService;
 
         private readonly Dictionary<string, string> _assistantDic = [];
         private readonly string _selectorCustomId = "ai-selector";
 
-        public ChatBotHandler(ILogger<ChatBotHandler> logger, LizardBotClient client, ChatBotService chatBotService)
+        private readonly Dictionary<ulong, BotChannel> _chatBotChannels = [];
+
+        public ChatBotHandler(ILogger<ChatBotHandler> logger, LizardBotClient client, ChatBotService chatBotService, GeneralService generalService)
         {
             _logger = logger;
             _client = client;
             _chatBotService = chatBotService;
+            _generalService = generalService;
         }
 
         /// <inheritdoc/>
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
+            // 이벤트 설정
             _client.Connected += OnConnected;
             _client.SelectMenuExecuted += OnSelectMenuExecuted;
             _client.MessageReceived += OnMessageReceived;
-            return Task.CompletedTask;
+
+            // 채널 로딩
+            var list = (await _generalService.GetCahnnelsAsync(ChannelSettingType.ChatBot)).ToList();
+            foreach (var item in list)
+                _chatBotChannels.Add(item.Id, item);
         }
 
         /// <inheritdoc/>
@@ -40,6 +51,7 @@ namespace LizardBot.DiscordBot.DiscordHandler
 
         private async Task OnMessageReceived(SocketMessage message)
         {
+            _logger.LogInformation("입력된 메시지 : {}", message);
             if (message.Channel.GetChannelType() != ChannelType.PublicThread) return;
             if (message.Author.IsBot) return;
 
@@ -48,15 +60,15 @@ namespace LizardBot.DiscordBot.DiscordHandler
             if (await _chatBotService.GetThreadIdAsync(channelId) is null) return;
             if (message.Content == "&답")
             {
+                var delTask = message.DeleteAsync();
                 var answer = await _chatBotService.CreateRunAsync(channelId);
-                Console.WriteLine(answer);
+
                 await message.Channel.SendMessageAsync(answer);
-                await message.DeleteAsync();
+                delTask.GetAwaiter().GetResult();
                 return;
             }
 
             await _chatBotService.AddMessageAsync(message.Content, message.Channel.Id);
-
         }
 
         /// <summary>
@@ -89,12 +101,25 @@ namespace LizardBot.DiscordBot.DiscordHandler
             var componentBuilder = new ComponentBuilder()
                 .WithSelectMenu(selectmenuBuilder);
 
-            await ((IMessageChannel)await _client.GetChannelAsync(1270673734889639936))
-                .ModifyMessageAsync(1270750153627926681, msgProp =>
+            foreach (var ch in _chatBotChannels)
+            {
+                if (ch.Value.NoticeId == 0)
                 {
-                    msgProp.Embed = builder.Build();
-                    msgProp.Components = componentBuilder.Build();
-                });
+                    var msg = ((IMessageChannel)await _client.GetChannelAsync(ch.Key))
+                        .SendMessageAsync(embed: builder.Build(), components: componentBuilder.Build());
+                    ch.Value.NoticeId = (ulong)msg.Id;
+                    await _generalService.UpdateChannelAsync(ch.Value);
+                }
+                else
+                {
+                    await ((IMessageChannel)await _client.GetChannelAsync(ch.Key))
+                        .ModifyMessageAsync(ch.Value.NoticeId, msgProp =>
+                        {
+                            msgProp.Embed = builder.Build();
+                            msgProp.Components = componentBuilder.Build();
+                        });
+                }
+            }
         }
 
         /// <summary>

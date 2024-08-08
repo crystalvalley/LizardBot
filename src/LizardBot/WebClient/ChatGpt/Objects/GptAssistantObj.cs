@@ -4,7 +4,7 @@ using Newtonsoft.Json.Serialization;
 namespace LizardBot.WebClient.ChatGpt.Objects
 {
     [ToString]
-    public class GptAssistant
+    public class GptAssistantObj
     {
         [JsonProperty("id")]
         public required string Id { get; set; }

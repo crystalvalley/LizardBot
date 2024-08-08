@@ -8,8 +8,8 @@ using System.Threading.Tasks;
 
 namespace LizardBot.Data.Model
 {
-    [Table("gpt_thread")]
-    public class GptThreadSet
+    [Table("gpt_thread", Schema = "lizardbot")]
+    public class GptThread
     {
         [Key]
         public required string Id { get; set; }
@@ -18,7 +18,9 @@ namespace LizardBot.Data.Model
 
         public Guid OwnerId { get; set; }
 
-        public int TokenUsage { get; set; }
+        public int InputUsage { get; set; }
+
+        public int OutputUsage { get; set; }
 
         public ulong ChannelId { get; set; }
     }

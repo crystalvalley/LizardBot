@@ -3,6 +3,7 @@ using System;
 using LizardBot.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LizardBot.Migrations
 {
     [DbContext(typeof(LizardBotDbContext))]
-    partial class LizardBotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240808044044_20240808")]
+    partial class _20240808
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,9 +29,6 @@ namespace LizardBot.Migrations
                 {
                     b.Property<decimal>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("numeric(20,0)");
-
-                    b.Property<decimal>("NoticeId")
                         .HasColumnType("numeric(20,0)");
 
                     b.Property<int>("SettingType")
@@ -51,14 +51,11 @@ namespace LizardBot.Migrations
                     b.Property<decimal>("ChannelId")
                         .HasColumnType("numeric(20,0)");
 
-                    b.Property<int>("InputUsage")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("OutputUsage")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("TokenUsage")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

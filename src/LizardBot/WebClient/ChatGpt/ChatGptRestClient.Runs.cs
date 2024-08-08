@@ -13,10 +13,12 @@ namespace LizardBot.WebClient.ChatGpt
     public partial class ChatGptRestClient
     {
         private readonly string _messageCompleted = "event: thread.message.completed";
+        private readonly string _runCompleted = "event: thread.run.completed";
 
-        public async Task<GptMessage?> CreateRunAsync(string threadId, string assistantId)
+        public async Task<(GptMessageObj?, GptRunObj?)> CreateRunAsync(string threadId, string assistantId)
         {
-            GptMessage? message = null;
+            GptMessageObj? message = null;
+            GptRunObj? run = null;
             var request = new RestRequest($"/v1/threads/{threadId}/runs");
             request
                 .AddHeader("Content-Type", "application/json")
@@ -42,7 +44,23 @@ namespace LizardBot.WebClient.ChatGpt
                         if (line == _messageCompleted)
                         {
                             line = reader.ReadLine() ?? throw new ArgumentNullException("null");
-                            message = JsonConvert.DeserializeObject<GptMessage>(line[6..]);
+                            _logger.LogInformation("message complete : {}", line);
+                            message = JsonConvert.DeserializeObject<GptMessageObj>(line[6..]);
+                        }
+
+                        if (line == _runCompleted)
+                        {
+                            line = reader.ReadLine() ?? throw new ArgumentNullException("null");
+                            _logger.LogInformation("run complete : {}", line);
+                            try
+                            {
+                                run = JsonConvert.DeserializeObject<GptRunObj>(line[6..]);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e.Message);
+                                Console.WriteLine(e.StackTrace);
+                            }
                         }
                     }
                 }
@@ -53,7 +71,7 @@ namespace LizardBot.WebClient.ChatGpt
             request.AddBody(body);
 
             var response = await _client.PostAsync(request);
-            return message;
+            return (message, run);
         }
     }
 }

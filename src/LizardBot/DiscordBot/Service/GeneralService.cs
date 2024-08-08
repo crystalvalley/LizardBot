@@ -1,5 +1,7 @@
-﻿using LizardBot.Data;
+﻿using LizardBot.Common.Enums;
+using LizardBot.Data;
 using LizardBot.Data.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace LizardBot.DiscordBot.Service
 {
@@ -8,23 +10,37 @@ namespace LizardBot.DiscordBot.Service
     /// </summary>
     public class GeneralService
     {
-        private readonly LizardBotDbContext _dbContext;
+        private readonly IDbContextFactory<LizardBotDbContext> _dbContextFactory;
 
-        public GeneralService(LizardBotDbContext dbContext)
+        public GeneralService(IDbContextFactory<LizardBotDbContext> dbContextFactory)
         {
-            _dbContext = dbContext;
+            _dbContextFactory = dbContextFactory;
         }
 
         public async Task<Guid> AddUserDataAsync(ulong discordId)
         {
+            var dbContext = _dbContextFactory.CreateDbContext();
             var result = Guid.NewGuid();
-            _dbContext.Users.Add(new User()
+            dbContext.Users.Add(new PlatformUser()
             {
                 DiscordId = discordId,
                 Id = result,
             });
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
             return result;
+        }
+
+        public Task<List<BotChannel>> GetCahnnelsAsync(ChannelSettingType type)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            return dbContext.BotChannels.Where(c => c.SettingType == type).ToListAsync();
+        }
+
+        public async Task UpdateChannelAsync(BotChannel ch)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            dbContext.Update(ch);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

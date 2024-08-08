@@ -8,5 +8,10 @@ namespace LizardBot.WebClient.ChatGpt
         public required RestClientOptions Options { get; init; }
 
         public required string SecretKey { get; init; }
+
+        public RestClient CreateConfiguredClient()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

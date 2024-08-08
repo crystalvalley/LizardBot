@@ -15,7 +15,7 @@ namespace LizardBot.WebClient.ChatGpt
         /// <see href="https://platform.openai.com/docs/api-reference/assistants/createAssistant"/>.
         /// </summary>
         /// <returns>생성된 어시스턴트 반환.</returns>
-        public async Task<List<GptAssistant>> GetAssistantsAsync()
+        public async Task<List<GptAssistantObj>> GetAssistantsAsync()
         {
             var request = new RestRequest("/v1/assistants");
             request
@@ -27,7 +27,7 @@ namespace LizardBot.WebClient.ChatGpt
             ArgumentNullException.ThrowIfNull(response.Content);
             var obj = JObject.Parse(response.Content)["data"];
             ArgumentNullException.ThrowIfNull(obj);
-            return JsonConvert.DeserializeObject<List<GptAssistant>>(obj.ToString()) ?? [];
+            return JsonConvert.DeserializeObject<List<GptAssistantObj>>(obj.ToString()) ?? [];
         }
     }
 }
