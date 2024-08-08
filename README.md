@@ -4,6 +4,11 @@
 
 ## Todo
 
+## 기능
+ - ChatBot이랑 대화하기
+	- 대화방 생성 (챗봇용 채널에서 공지사항의 컴포넌트를 통해 스레드 생성)
+	- 대화
+
 ## Libraries
 [Discord.Net](https://www.nuget.org/packages/Discord.Net)
 
@@ -23,3 +28,4 @@
 
 ## History
 2024/08/07 프로젝트 초기화.
+2024/08/08 ChatGpt 대화기능 추가.
