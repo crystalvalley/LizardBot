@@ -13,7 +13,7 @@ namespace LizardBot.WebClient.ChatGpt
     public partial class ChatGptRestClient
     {
 
-        public async Task<GptMessage?> CreateMessageAsync(string threadId, string message)
+        public async Task<GptMessageObj?> CreateMessageAsync(string threadId, string message)
         {
             var request = new RestRequest($"/v1/threads/{threadId}/messages");
             request
@@ -30,7 +30,7 @@ namespace LizardBot.WebClient.ChatGpt
             request.AddBody(body);
             var response = await _client.PostAsync(request);
             ArgumentNullException.ThrowIfNull(response.Content);
-            return JsonConvert.DeserializeObject<GptMessage>(response.Content);
+            return JsonConvert.DeserializeObject<GptMessageObj>(response.Content);
         }
     }
 }

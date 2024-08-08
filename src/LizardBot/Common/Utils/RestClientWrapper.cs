@@ -13,5 +13,8 @@ namespace LizardBot.Common.Utils
         {
             Config = config;
         }
+
+        public RestClient GetClient()
+            => Config.CreateConfiguredClient();
     }
 }

@@ -3,7 +3,7 @@
 namespace LizardBot.WebClient.ChatGpt.Objects
 {
     [ToString]
-    public class GptThread
+    public class GptThreadObj
     {
         [JsonProperty("id")]
         public required string Id { get; set; }

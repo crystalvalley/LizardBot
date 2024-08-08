@@ -15,31 +15,34 @@ namespace LizardBot.DiscordBot.Service
     public class ChatBotService
     {
         private readonly ILogger _logger;
-        private readonly LizardBotDbContext _dbContext;
+        private readonly IDbContextFactory<LizardBotDbContext> _dbContextFactory;
         private readonly ChatGptRestClient _client;
         private readonly GeneralService _generalService;
-        private readonly MemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+        private readonly MemoryCache _cache = new(new MemoryCacheOptions());
 
-        public ChatBotService(ILogger<ChatBotService> logger, LizardBotDbContext dbContext, ChatGptRestClient client, GeneralService generalService)
+        public ChatBotService(ILogger<ChatBotService> logger, IDbContextFactory<LizardBotDbContext> dbContextFactory, ChatGptRestClient client, GeneralService generalService)
         {
             _client = client;
-            _dbContext = dbContext;
+            _dbContextFactory = dbContextFactory;
             _logger = logger;
             _generalService = generalService;
         }
 
         public async Task CreateThreadAsync(string assistantId, ulong userDiscordId, ulong channelId)
         {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            var threadJob = _client.CreateThreadAsync();
             Guid userId;
-            var user = await _dbContext.Users
+            var user = await dbContext.Users
                 .Where(u => u.DiscordId == userDiscordId)
                 .FirstOrDefaultAsync();
             if (user is null) userId = await _generalService.AddUserDataAsync(userDiscordId);
             else userId = user.Id;
-            var thread = await _client.CreateThreadAsync();
+
+            var thread = threadJob.GetAwaiter().GetResult();
             ArgumentNullException.ThrowIfNull(thread);
-            await _dbContext.GptThreads
-                .AddAsync(new GptThreadSet()
+            await dbContext.GptThreads
+                .AddAsync(new GptThread()
                 {
                     AssistantId = assistantId,
                     Id = thread.Id,
@@ -47,7 +50,7 @@ namespace LizardBot.DiscordBot.Service
                     ChannelId = channelId,
                 });
             _cache.Set(channelId, thread.Id);
-            await _dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
 
         public async Task AddMessageAsync(string message, ulong channelId)
@@ -55,23 +58,32 @@ namespace LizardBot.DiscordBot.Service
 
         public async Task<string> CreateRunAsync(ulong channelId)
         {
+            _logger.LogInformation("{}", channelId);
+            var dbContext = _dbContextFactory.CreateDbContext();
             var thread = await GetThreadIdAsync(channelId);
             ArgumentNullException.ThrowIfNull(thread);
-            var gptMessage = await _client.CreateRunAsync(thread.Id, thread.AssistantId);
-
-            var str = JObject.Parse(gptMessage.Content[0].ToString())["text"]["value"].ToString();
+            var (gptMessage, run) = await _client.CreateRunAsync(thread.Id, thread.AssistantId);
+            ArgumentNullException.ThrowIfNull(gptMessage);
+            ArgumentNullException.ThrowIfNull(run);
+            var str = JObject.Parse(gptMessage.Content[0].ToString()!)["text"]!["value"]!.ToString();
+            thread.InputUsage += run.Usage!.PromptTokens;
+            thread.OutputUsage += run.Usage!.CompletionTokens;
+            dbContext.Update(thread);
+            await dbContext.SaveChangesAsync();
             return str;
         }
 
-        public async Task<List<GptAssistant>> GetAssistantsAsync()
+        public async Task<List<GptAssistantObj>> GetAssistantsAsync()
             => await _client.GetAssistantsAsync();
 
-        public async Task<GptThreadSet?> GetThreadIdAsync(ulong channelId)
+        public async Task<GptThread?> GetThreadIdAsync(ulong channelId)
         {
-            GptThreadSet? thread;
+            _logger.LogDebug("??");
+            var dbContext = _dbContextFactory.CreateDbContext();
+            GptThread? thread;
             if (!_cache.TryGetValue(channelId, out thread))
             {
-                thread = await _dbContext.GptThreads
+                thread = await dbContext.GptThreads
                     .Where(t => t.ChannelId == channelId)
                     .FirstOrDefaultAsync();
             }
