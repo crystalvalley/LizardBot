@@ -16,7 +16,7 @@ namespace LizardBot.DiscordBot.DiscordHandler
         private readonly ChatBotService _chatBotService;
         private readonly GeneralService _generalService;
 
-        private readonly Dictionary<string, string> _assistantDic = [];
+        private readonly Dictionary<string, (string, string?)> _assistantDic = [];
         private readonly string _selectorCustomId = "ai-selector";
 
         private readonly Dictionary<ulong, BotChannel> _chatBotChannels = [];
@@ -76,6 +76,13 @@ namespace LizardBot.DiscordBot.DiscordHandler
         /// </summary>
         private async Task OnConnected()
         {
+            var assistants = await _chatBotService.GetAssistantsAsync();
+
+            foreach (var assistant in assistants)
+            {
+                _assistantDic.Add(assistant.Id, (assistant.Name ?? assistant.Id, assistant.Description));
+            }
+
             var builder = new EmbedBuilder()
                     .WithAuthor("CrystalValley")
                     .WithTitle("🎉(실험중인 기능) 챗봇과 대화하기")
@@ -84,22 +91,7 @@ namespace LizardBot.DiscordBot.DiscordHandler
                     "답변을 원하시면 [&답] 이라고 입력해주세요.")
                     .WithFooter("갱신일자 - 2024/08/07");
 
-            var selectmenuBuilder = new SelectMenuBuilder()
-                .WithPlaceholder("대화할 어시스턴트를 골라주세요.")
-                .WithCustomId(_selectorCustomId)
-                .WithMinValues(1)
-                .WithMaxValues(1);
-
-            var assistants = await _chatBotService.GetAssistantsAsync();
-
-            foreach (var assistant in assistants)
-            {
-                _assistantDic.Add(assistant.Id, assistant.Name ?? assistant.Id);
-                selectmenuBuilder.AddOption(assistant.Name, assistant.Id, assistant.Description);
-            }
-
-            var componentBuilder = new ComponentBuilder()
-                .WithSelectMenu(selectmenuBuilder);
+            var componentBuilder = MakeComponentBuilder();
 
             foreach (var ch in _chatBotChannels)
             {
@@ -137,8 +129,32 @@ namespace LizardBot.DiscordBot.DiscordHandler
                 await channel.SendMessageAsync("대화를 시작해보세요.");
             var thread = await channel.CreateThreadAsync($"{component.User.Username}의 대화, 담당봇 : {_assistantDic[assistantId]}", message: threadStartMessage);
 
-            await _chatBotService.CreateThreadAsync(assistantId, component.User.Id, thread.Id);
-            await component.RespondAsync("대화를 시작해보세요!😉", ephemeral: true);
+            var createThreadTask = _chatBotService.CreateThreadAsync(assistantId, component.User.Id, thread.Id);
+            var respondTask = component.RespondAsync("대화를 시작해보세요!😉", ephemeral: true);
+            var updateTask = component.Message.ModifyAsync(msgProp =>
+            {
+                msgProp.Components = MakeComponentBuilder().Build();
+            });
+
+            await Task.WhenAll(createThreadTask, respondTask, updateTask);
+        }
+
+        private ComponentBuilder MakeComponentBuilder()
+        {
+            var selectmenuBuilder = new SelectMenuBuilder()
+                .WithPlaceholder("대화할 어시스턴트를 골라주세요.")
+                .WithCustomId(_selectorCustomId)
+                .WithMinValues(1)
+                .WithMaxValues(1);
+
+            foreach (var assistant in _assistantDic)
+            {
+                var (name, description) = assistant.Value;
+                selectmenuBuilder.AddOption(assistant.Key, name, description);
+            }
+
+            return new ComponentBuilder()
+                .WithSelectMenu(selectmenuBuilder);
         }
     }
 }
