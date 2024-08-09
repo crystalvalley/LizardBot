@@ -14,14 +14,14 @@ namespace LizardBot.DiscordBot.DiscordHandler
         private readonly LizardBotClient _client;
         private readonly LizardBotCommandService _command;
 
-        private readonly string _prefix;
+        private readonly char _prefix;
 
         public CommandHandler(ILogger<CommandHandler> logger, LizardBotClient client, LizardBotCommandService command, IConfiguration config)
         {
             _logger = logger;
             _client = client;
             _command = command;
-            _prefix = config["Prefix"] ?? throw new NoSettingDataException("Prefix");
+            _prefix = (config["Prefix"] ?? throw new NoSettingDataException("Prefix")).ToCharArray()[0];
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -42,7 +42,7 @@ namespace LizardBot.DiscordBot.DiscordHandler
             int argPos = 0;
 
             SocketCommandContext? context = new SocketCommandContext(_client, socketUserMessage);
-            if (!socketUserMessage.HasCharPrefix('!', ref argPos)) return;
+            if (!socketUserMessage.HasCharPrefix(_prefix, ref argPos)) return;
 
             await _command.ExecuteAsync(context, argPos);
         }
