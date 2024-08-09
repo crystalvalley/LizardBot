@@ -5,3 +5,5 @@ src/LizardBot/bin
 src/LizardBot/obj
 
 src/LizardBot/appsettings.json
+
+src/LizardBot/Migrations
