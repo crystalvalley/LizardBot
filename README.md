@@ -27,5 +27,5 @@
 [RestSharp](https://www.nuget.org/packages/RestSharp)
 
 ## History
-2024/08/07 프로젝트 초기화.
+2024/08/07 프로젝트 초기화.   
 2024/08/08 ChatGpt 대화기능 추가.
