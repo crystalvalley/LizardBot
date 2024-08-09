@@ -24,15 +24,15 @@ namespace LizardBot.DiscordBot.DiscordHandler
             _prefix = config["Prefix"] ?? throw new NoSettingDataException("Prefix");
         }
 
-        public Task StartAsync(CancellationToken CancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             _client.MessageReceived += OnMessageReceived;
             return Task.CompletedTask;
         }
 
-        public async Task StopAsync(CancellationToken CancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            await StopAsync(CancellationToken);
+            await StopAsync(cancellationToken);
         }
 
         private async Task OnMessageReceived(SocketMessage message)
