@@ -3,6 +3,7 @@
 ✨도마뱀 컴퍼니 디스코드 봇✨
 
 ## Todo
+[github issues에 기재](https://github.com/crystalvalley/LizardBot/issues?q=is%3Aopen+is%3Aissue+label%3AFeature)
 
 ## 기능
  - ChatBot이랑 대화하기

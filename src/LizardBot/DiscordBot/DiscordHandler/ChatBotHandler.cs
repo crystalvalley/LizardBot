@@ -51,19 +51,29 @@ namespace LizardBot.DiscordBot.DiscordHandler
 
         private async Task OnMessageReceived(SocketMessage message)
         {
-            _logger.LogInformation("입력된 메시지 : {}", message);
             if (message.Channel.GetChannelType() != ChannelType.PublicThread) return;
             if (message.Author.IsBot) return;
 
             var channelId = message.Channel.Id;
 
             if (await _chatBotService.GetThreadIdAsync(channelId) is null) return;
-            if (message.Content == "&답")
+            if (message.Content.Trim().StartsWith('&'))
             {
+                _logger.LogInformation("입력된 명령어 : {}", message.Content);
                 var delTask = message.DeleteAsync();
-                var answer = await _chatBotService.CreateRunAsync(channelId);
+                if (message.Content == "&답")
+                {
+                    var answer = await _chatBotService.CreateRunAsync(channelId);
 
-                await message.Channel.SendMessageAsync(answer);
+                    await message.Channel.SendMessageAsync(answer);
+                }
+                else if (message.Content == "&종료")
+                {
+                    await _chatBotService.AddMessageAsync("지금까지 한 대화를 요약해줄 수 있을까?", message.Channel.Id);
+                    var answer = await _chatBotService.CreateRunAsync(channelId);
+                    await message.Channel.SendMessageAsync(answer);
+                }
+                else _logger.LogInformation("존재하지 않은 명령어가 입력됨 : {}", message.Content);
                 delTask.GetAwaiter().GetResult();
                 return;
             }
