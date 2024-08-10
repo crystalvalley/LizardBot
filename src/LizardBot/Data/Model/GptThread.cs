@@ -23,5 +23,7 @@ namespace LizardBot.Data.Model
         public int OutputUsage { get; set; }
 
         public ulong ChannelId { get; set; }
+
+        public bool IsEnd { get; set; }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using LizardBot.WebClient.ChatGpt.Objects.Sub;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 
 namespace LizardBot.WebClient.ChatGpt.Objects
@@ -31,7 +32,7 @@ namespace LizardBot.WebClient.ChatGpt.Objects
         public List<object> Tools { get; set; } = [];
 
         [JsonProperty("tool_resources")]
-        public object? ToolResource { get; set; }
+        public ToolResource? ToolResource { get; set; }
 
         [JsonProperty("metadata")]
         public Dictionary<string, object> Metadata { get; set; } = [];

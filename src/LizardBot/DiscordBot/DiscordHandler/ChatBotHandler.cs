@@ -6,6 +6,7 @@ using LizardBot.DiscordBot.Service;
 using LizardBot.WebClient.ChatGpt;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Threading.Channels;
 
 namespace LizardBot.DiscordBot.DiscordHandler
 {
@@ -36,6 +37,8 @@ namespace LizardBot.DiscordBot.DiscordHandler
             _client.Connected += OnConnected;
             _client.SelectMenuExecuted += OnSelectMenuExecuted;
             _client.MessageReceived += OnMessageReceived;
+            _client.ReactionAdded += OnReactionAdded;
+            _client.ReactionRemoved += OnReactionRemoved;
 
             // 채널 로딩
             var list = (await _generalService.GetCahnnelsAsync(ChannelSettingType.ChatBot)).ToList();
@@ -55,8 +58,11 @@ namespace LizardBot.DiscordBot.DiscordHandler
             if (message.Author.IsBot) return;
 
             var channelId = message.Channel.Id;
+            Task? reactionTask = Task.CompletedTask;
+            Task? updateTask = Task.CompletedTask;
+            GptThread? gptThread = await _chatBotService.GetThreadAsync(channelId, false);
 
-            if (await _chatBotService.GetThreadIdAsync(channelId) is null) return;
+            if (gptThread is null) return;
             if (message.Content.Trim().StartsWith('&'))
             {
                 _logger.LogInformation("입력된 명령어 : {}", message.Content);
@@ -69,12 +75,17 @@ namespace LizardBot.DiscordBot.DiscordHandler
                 }
                 else if (message.Content == "&종료")
                 {
-                    await _chatBotService.AddMessageAsync("지금까지 한 대화를 요약해줄 수 있을까?", message.Channel.Id);
+                    await _chatBotService.AddMessageAsync("지금까지 한 대화를 요약해줘.", message.Channel.Id);
                     var answer = await _chatBotService.CreateRunAsync(channelId);
-                    await message.Channel.SendMessageAsync(answer);
+                    var msg = await message.Channel.SendMessageAsync(answer);
+
+                    updateTask = _chatBotService.EndThreadAsync(gptThread);
+
+                    reactionTask = msg.AddReactionAsync(new Emoji("📃"));
                 }
-                else _logger.LogInformation("존재하지 않은 명령어가 입력됨 : {}", message.Content);
-                delTask.GetAwaiter().GetResult();
+                else _logger.LogInformation("존재하지 않은 명령어 : {}", message.Content);
+
+                await Task.WhenAll(delTask, reactionTask, updateTask);
                 return;
             }
 
@@ -96,10 +107,13 @@ namespace LizardBot.DiscordBot.DiscordHandler
             var builder = new EmbedBuilder()
                     .WithAuthor("CrystalValley")
                     .WithTitle("🎉(실험중인 기능) 챗봇과 대화하기")
-                    .WithDescription("개별 학습이 가능한 여러 어시스턴트와 대화하는 것이 가능합니다." + System.Environment.NewLine +
-                    "또한, 메시지를 보내자 마자 무조건 답변하는 것이 아니라 메시지를 여러번 전송한 다음에 원할 때 답변을 받을 수 있습니다." + System.Environment.NewLine +
-                    "답변을 원하시면 [&답] 이라고 입력해주세요.")
-                    .WithFooter("갱신일자 - 2024/08/07");
+                    .WithDescription("개별 학습이 가능한 여러 어시스턴트와 대화하는 것이 가능합니다." + Environment.NewLine +
+                    "또한, 메시지를 보내자 마자 무조건 답변하는 것이 아니라 메시지를 여러번 전송한 다음에 원할 때 답변을 받을 수 있습니다.")
+                    .WithFooter("갱신일자 - 2024/08/09")
+                    .AddField(
+                        "커맨드 설명",
+                        "&답 - 전송된 메시지를 기반으로 챗봇의 답변을 요구합니다." + Environment.NewLine + "&종료 - 현재 대화를 종료하고 대화의 요약본을 받아 봅니다.")
+                    .AddField("대화 저장 기능", "요약본의 메시지에 📃 반응을 추가하면 해당 대화는 저장됩니다,");
 
             var componentBuilder = MakeComponentBuilder();
 
@@ -109,7 +123,8 @@ namespace LizardBot.DiscordBot.DiscordHandler
                 {
                     var msg = ((IMessageChannel)await _client.GetChannelAsync(ch.Key))
                         .SendMessageAsync(embed: builder.Build(), components: componentBuilder.Build());
-                    ch.Value.NoticeId = (ulong)msg.Id;
+                    Console.WriteLine($"id {msg.Id}");
+                    ch.Value.NoticeId = Convert.ToUInt64(msg.Id);
                     await _generalService.UpdateChannelAsync(ch.Value);
                 }
                 else
@@ -160,11 +175,44 @@ namespace LizardBot.DiscordBot.DiscordHandler
             foreach (var assistant in _assistantDic)
             {
                 var (name, description) = assistant.Value;
-                selectmenuBuilder.AddOption(assistant.Key, name, description);
+                selectmenuBuilder.AddOption(name, assistant.Key, description);
             }
 
             return new ComponentBuilder()
                 .WithSelectMenu(selectmenuBuilder);
+        }
+
+        private async Task OnReactionRemoved(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task OnReactionAdded(Cacheable<IUserMessage, ulong> cachedMessage, Cacheable<IMessageChannel, ulong> originChannel, SocketReaction reaction)
+        {
+            var messageJob = cachedMessage.GetOrDownloadAsync();
+
+            // 파일 저장용 리액션인가
+            if (reaction.Emote.Name != "📃") return;
+
+            // 챗봉용 쓰레드인가
+            GptThread? gptThread = await _chatBotService.GetThreadAsync(originChannel.Id);
+            if (gptThread is null) return;
+
+            Console.WriteLine("?");
+
+            // 리액션 한 사람이 쓰레드 오너인가
+            var id = await _generalService.GetUserGuidAsync(reaction.UserId);
+            var message = messageJob.GetAwaiter().GetResult();
+            if (id != gptThread.OwnerId)
+            {
+                await message.RemoveReactionAsync(new Emoji("📃"), reaction.UserId);
+                return;
+            }
+
+            _logger.LogInformation("유저 {}가 {}메시지를 벡터스토어 저장 하려함.", reaction.UserId, cachedMessage.Id);
+
+            // 파일로 저장
+            await _chatBotService.SaveVectorFileAsync(message.Content, message.Id, originChannel.Id);
         }
     }
 }

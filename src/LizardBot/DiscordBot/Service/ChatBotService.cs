@@ -54,13 +54,13 @@ namespace LizardBot.DiscordBot.Service
         }
 
         public async Task AddMessageAsync(string message, ulong channelId)
-            => await _client.CreateMessageAsync((await GetThreadIdAsync(channelId) ?? throw new ArgumentNullException("threadId")).Id, message);
+            => await _client.CreateMessageAsync((await GetThreadAsync(channelId) ?? throw new ArgumentNullException("threadId")).Id, message);
 
         public async Task<string> CreateRunAsync(ulong channelId)
         {
             _logger.LogInformation("{}", channelId);
             var dbContext = _dbContextFactory.CreateDbContext();
-            var thread = await GetThreadIdAsync(channelId);
+            var thread = await GetThreadAsync(channelId);
             ArgumentNullException.ThrowIfNull(thread);
             var (gptMessage, run) = await _client.CreateRunAsync(thread.Id, thread.AssistantId);
             ArgumentNullException.ThrowIfNull(gptMessage);
@@ -73,12 +73,29 @@ namespace LizardBot.DiscordBot.Service
             return str;
         }
 
-        public async Task<List<GptAssistantObj>> GetAssistantsAsync()
-            => await _client.GetAssistantsAsync();
-
-        public async Task<GptThread?> GetThreadIdAsync(ulong channelId)
+        public async Task<List<GptAssistantObj>?> GetAssistantsAsync()
         {
-            _logger.LogDebug("??");
+            List<GptAssistantObj>? list;
+            if (!_cache.TryGetValue("asisstants", out list)) list = await _client.GetAssistantsAsync();
+            return list;
+        }
+
+        public async Task<GptThread?> GetThreadAsync(ulong channelId, bool isEnd)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            GptThread? thread;
+            if (!_cache.TryGetValue(channelId, out thread))
+            {
+                thread = await dbContext.GptThreads
+                    .Where(t => t.ChannelId == channelId && t.IsEnd == isEnd)
+                    .FirstOrDefaultAsync();
+            }
+
+            return thread;
+        }
+
+        public async Task<GptThread?> GetThreadAsync(ulong channelId)
+        {
             var dbContext = _dbContextFactory.CreateDbContext();
             GptThread? thread;
             if (!_cache.TryGetValue(channelId, out thread))
@@ -89,6 +106,51 @@ namespace LizardBot.DiscordBot.Service
             }
 
             return thread;
+        }
+
+        public async Task EndThreadAsync(GptThread thread)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            thread.IsEnd = true;
+            dbContext.GptThreads.Update(thread);
+            _cache.Remove(thread.ChannelId);
+            await dbContext.SaveChangesAsync();
+        }
+
+        public async Task SaveVectorFileAsync(string content, ulong messageId, ulong channelId)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            var threadJob = GetThreadAsync(channelId);
+            var assistListJob = GetAssistantsAsync();
+            await Task.WhenAll(threadJob, assistListJob);
+
+            var thread = threadJob.Result;
+            var assistList = assistListJob.Result;
+
+            var assist = assistList!.Where(a => a.Id == thread.AssistantId).FirstOrDefault();
+
+            var vectorFile = new VectorFile()
+            {
+                ThreadId = thread!.Id,
+                MessageId = messageId,
+                VectorStorageID = assist!.ToolResource!.FileSearch!.VectorStoreIds[0],
+            };
+
+            var stream = new MemoryStream();
+            var writer = new StreamWriter(stream);
+            writer.Write(content);
+            writer.Flush();
+            stream.Position = 0;
+
+            var file = await _client.UploadFileAsync(stream);
+            ArgumentNullException.ThrowIfNull(file);
+            vectorFile.FileId = file.Id;
+
+            var result = await _client.CreateVectorStoreFileAsync(vectorFile.FileId, vectorFile.VectorStorageID);
+            ArgumentNullException.ThrowIfNull(result);
+            vectorFile.IsAttached = true;
+            await dbContext.VectorFiles.AddAsync(vectorFile);
+            await dbContext.SaveChangesAsync();
         }
     }
 }
