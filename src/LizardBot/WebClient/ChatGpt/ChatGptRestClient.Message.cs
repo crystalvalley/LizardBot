@@ -12,7 +12,6 @@ namespace LizardBot.WebClient.ChatGpt
     /// </summary>
     public partial class ChatGptRestClient
     {
-
         public async Task<GptMessageObj?> CreateMessageAsync(string threadId, string message)
         {
             var request = new RestRequest($"/v1/threads/{threadId}/messages");

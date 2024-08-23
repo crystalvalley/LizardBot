@@ -30,6 +30,12 @@ namespace LizardBot.DiscordBot.Service
             return result;
         }
 
+        public async Task<Guid> GetUserGuidAsync(ulong discordId)
+        {
+            var dbContext = _dbContextFactory.CreateDbContext();
+            return await dbContext.Users.Where(u => u.DiscordId == discordId).Select(u => u.Id).SingleOrDefaultAsync();
+        }
+
         public Task<List<BotChannel>> GetCahnnelsAsync(ChannelSettingType type)
         {
             var dbContext = _dbContextFactory.CreateDbContext();

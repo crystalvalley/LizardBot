@@ -14,5 +14,7 @@ namespace LizardBot.Data
         public DbSet<BotChannel> BotChannels { get; set; }
 
         public DbSet<GptThread> GptThreads { get; set; }
+
+        public DbSet<VectorFile> VectorFiles { get; set; }
     }
 }
