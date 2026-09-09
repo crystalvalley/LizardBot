@@ -1,4 +1,5 @@
 ﻿using Discord.Interactions;
+using Discord.WebSocket;
 using LizardBot.Services;
 using System.Text;
 
@@ -9,7 +10,8 @@ namespace LizardBot.Discord.Commands;
 /// </summary>
 public sealed class ServerModule(
     ServerStatusService statusService,
-    WakeOnLanService wakeOnLanService) : InteractionModuleBase<SocketInteractionContext>
+    WakeOnLanService wakeOnLanService,
+    IConfiguration configuration) : InteractionModuleBase<SocketInteractionContext>
 {
 
     /// <summary>
@@ -52,16 +54,25 @@ public sealed class ServerModule(
 
         await FollowupAsync(message.ToString());
     }
-    
+
     /// <summary>
-     /// Wakes a configured server using Wake-on-LAN
-     /// and waits for it to become reachable.
-     /// </summary>
+    /// Wakes a configured server using Wake-on-LAN
+    /// and waits for it to become reachable.
+    /// </summary>
     [SlashCommand(
         "wake",
         "절전 상태인 서버를 Wake-on-LAN으로 깨웁니다.")]
     public async Task WakeAsync(string server)
     {
+        if (!HasAdminRole())
+        {
+            await RespondAsync(
+                "⛔ 이 명령을 사용할 권한이 없습니다.",
+                ephemeral: true);
+
+            return;
+        }
+
         await DeferAsync();
 
         var status = await statusService.GetStatusAsync(server);
@@ -114,5 +125,28 @@ public sealed class ServerModule(
         }
 
         await FollowupAsync($"⚠️ **{status.Name}**이(가) 제한 시간 내에 응답하지 않았습니다.");
+    }
+
+    /// <summary>
+    /// Checks whether the user executing the command has
+    /// any of the configured administrator roles.
+    /// </summary>
+    private bool HasAdminRole()
+    {
+        var adminRoleIds = configuration
+            .GetSection("Discord:AdminRoleIds")
+            .Get<List<ulong>>();
+
+        // Fail closed if no administrator roles are configured.
+        if (adminRoleIds is null || adminRoleIds.Count == 0)
+            return false;
+
+        if (Context.User is not SocketGuildUser guildUser)
+            return false;
+
+        // A user is considered an administrator if they have
+        // at least one role listed in AdminRoleIds.
+        return guildUser.Roles.Any(
+            role => adminRoleIds.Contains(role.Id));
     }
 }

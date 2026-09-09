@@ -46,6 +46,17 @@ builder.Services.AddSingleton<ServerStatusService>();
 // Sends Wake-on-LAN Magic Packets to configured servers.
 builder.Services.AddSingleton<WakeOnLanService>();
 
+// Bind background monitoring settings from appsettings.json.
+// Changes to appsettings.json are automatically reloaded while LizardBot
+// is running, so IOptionsMonitor<T> can use updated monitoring settings
+// without restarting the application.
+builder.Services.Configure<MonitoringOptions>(
+    builder.Configuration.GetSection("Monitoring"));
+
+// Periodically monitors configured servers and reports status changes
+// to Discord.
+builder.Services.AddHostedService<ServerMonitorService>();
+
 var app = builder.Build();
 
 // Simple endpoint that confirms the ASP.NET Core host itself is running.
