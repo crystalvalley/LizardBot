@@ -1,6 +1,12 @@
-var builder = WebApplication.CreateBuilder(args);
+﻿var builder = WebApplication.CreateBuilder(args);
+
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/", () => "LizardControlBot is running.");
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    service = "LizardControlBot"
+}));
 
 app.Run();
