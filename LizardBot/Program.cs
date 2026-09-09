@@ -43,6 +43,9 @@ builder.Services.Configure<ServerManagementOptions>(
 // and, later, by the background monitoring service.
 builder.Services.AddSingleton<ServerStatusService>();
 
+// Sends Wake-on-LAN Magic Packets to configured servers.
+builder.Services.AddSingleton<WakeOnLanService>();
+
 var app = builder.Build();
 
 // Simple endpoint that confirms the ASP.NET Core host itself is running.
