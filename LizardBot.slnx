@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/솔루션 항목/">
     <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/release.yml" />
     <File Path=".gitignore" />
     <File Path="LICENSE.txt" />
     <File Path="README.ko.md" />

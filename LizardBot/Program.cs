@@ -7,6 +7,17 @@ using LizardBot.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load managed server definitions from an external configuration file when available.
+//
+// On the Raspberry Pi, server settings are stored in /etc/lizardbot/servers.json.
+// On development machines where this file is not present, the settings can
+// continue to be provided through standard ASP.NET Core configuration sources,
+// such as .NET User Secrets.
+builder.Configuration.AddJsonFile(
+    "/etc/lizardbot/servers.json",
+    optional: true,
+    reloadOnChange: true);
+
 // Register the Discord gateway client as a singleton.
 // LizardBot only uses slash commands, so the Guilds intent is enough for now.
 // Additional intents can be enabled later if message or member events are needed.
