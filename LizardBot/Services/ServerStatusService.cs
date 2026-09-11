@@ -11,6 +11,7 @@ namespace LizardBot.Services;
 /// </summary>
 public sealed class ServerStatusService(
     IOptionsMonitor<ServerManagementOptions> options,
+    DiscordDashboardService dashboardService,
     ILogger<ServerStatusService> logger)
 {
 

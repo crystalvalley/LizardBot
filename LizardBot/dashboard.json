@@ -1,0 +1,54 @@
+﻿{
+  "Dashboard": {
+    "Title": "🎉 (주) 도마뱀 서버 & 서비스 현황 ✨",
+    "Description": "🦎 도마뱀 컴퍼니에서 제공 중인 서비스와 현재 서버 상태를 안내합니다.",
+    "Administrator": "수정계곡",
+    "RefreshIntervalMinutes": 60,
+
+    "Servers": [
+      {
+        "ServerId": "lizard",
+        "Visible": true,
+        "ShowUptime": true,
+        "ShowServices": false
+      }
+    ],
+
+    "Notices": [
+      {
+        "Title": "☁️ 클라우드 서버",
+        "Description": "📦 개인 이용을 원하시는 경우 **수정계곡**에게 DM으로 문의해주세요.",
+        "ServerId": "lizard",
+        "ServiceName": "Cloud",
+        "Fields": [
+          {
+            "Name": "🔗 접속 주소",
+            "Value": "서버 주소"
+          },
+          {
+            "Name": "🌐 공개 주소",
+            "Value": "서버 주소"
+          },
+          {
+            "Name": "👤 공용 계정",
+            "Value": "LizardUser"
+          }
+        ],
+        "Footer": "🔐 공용 계정 비밀번호는 관리자에게 별도로 문의해주세요."
+      },
+      {
+        "Title": "⛏️ Minecraft Server",
+        "Description": "🧱 **Java Edition**",
+        "ServerId": "lizard",
+        "ServiceName": "Minecraft",
+        "Fields": [
+          {
+            "Name": "🎮 접속 주소",
+            "Value": "서버 주소"
+          }
+        ],
+        "Footer": "🐲 서버가 잠들어 있다면 관리자에게 `/wake`를 요청해주세요."
+      }
+    ]
+  }
+}

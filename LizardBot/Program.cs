@@ -18,6 +18,20 @@ builder.Configuration.AddJsonFile(
     optional: true,
     reloadOnChange: true);
 
+// Load dashboard content from an external configuration file when available.
+//
+// On the Raspberry Pi, DashboardConfig__FilePath can point to
+// /etc/lizardbot/dashboard.json.
+// Development environments can use the local dashboard.json file instead.
+var dashboardConfigPath =
+    builder.Configuration["DashboardConfig:FilePath"]
+    ?? "./dashboard.json";
+
+builder.Configuration.AddJsonFile(
+    dashboardConfigPath,
+    optional: true,
+    reloadOnChange: true);
+
 // Register the Discord gateway client as a singleton.
 // LizardBot only uses slash commands, so the Guilds intent is enough for now.
 // Additional intents can be enabled later if message or member events are needed.
@@ -67,6 +81,30 @@ builder.Services.Configure<MonitoringOptions>(
 // Periodically monitors configured servers and reports status changes
 // to Discord.
 builder.Services.AddHostedService<ServerMonitorService>();
+
+// Dashboard content can be updated while LizardBot is running
+// because dashboard.json is loaded with reloadOnChange enabled.
+builder.Services.Configure<DashboardOptions>(
+    builder.Configuration.GetSection("Dashboard"));
+
+// Runtime state is stored separately from user-managed dashboard content.
+builder.Services.Configure<DashboardRuntimeOptions>(
+    builder.Configuration.GetSection("DashboardRuntime"));
+
+// Provides persistent storage for dashboard runtime state,
+// such as the Discord Dashboard Message ID.
+builder.Services.AddSingleton<DashboardStateStore>();
+
+// Maintains the persistent Discord server dashboard.
+//
+// The same singleton instance is also registered as a hosted service so it
+// can initialize automatically when LizardBot starts while remaining
+// available to ServerMonitorService through dependency injection.
+builder.Services.AddSingleton<DiscordDashboardService>();
+
+builder.Services.AddHostedService(
+    services =>
+        services.GetRequiredService<DiscordDashboardService>());
 
 var app = builder.Build();
 

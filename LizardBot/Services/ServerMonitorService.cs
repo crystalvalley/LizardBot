@@ -14,6 +14,7 @@ public sealed class ServerMonitorService(
     DiscordSocketClient discordClient,
     IOptionsMonitor<MonitoringOptions> options,
     IConfiguration configuration,
+    DiscordDashboardService dashboardService,
     ILogger<ServerMonitorService> logger) : BackgroundService
 {
     private readonly Dictionary<string, bool> _previousStates =
@@ -56,10 +57,12 @@ public sealed class ServerMonitorService(
     /// Checks all configured servers and detects online status changes.
     /// </summary>
     private async Task CheckServersAsync(
-        CancellationToken cancellationToken)
+    CancellationToken cancellationToken)
     {
         var statuses =
             await statusService.GetAllStatusesAsync(cancellationToken);
+
+        var stateChanged = false;
 
         foreach (var status in statuses)
         {
@@ -67,8 +70,6 @@ public sealed class ServerMonitorService(
                     status.Id,
                     out var previousOnline))
             {
-                // The first check establishes the initial state.
-                // Do not send a notification every time LizardBot starts.
                 _previousStates[status.Id] = status.Online;
 
                 logger.LogInformation(
@@ -83,52 +84,18 @@ public sealed class ServerMonitorService(
                 continue;
 
             _previousStates[status.Id] = status.Online;
+            stateChanged = true;
 
-            await NotifyStatusChangeAsync(
-                status.Name,
-                status.Online);
-        }
-    }
-
-    /// <summary>
-    /// Sends an online or offline notification to the configured Discord channel.
-    /// </summary>
-    private async Task NotifyStatusChangeAsync(
-        string serverName,
-        bool online)
-    {
-        var channelIdText =
-            configuration["Discord:StatusChannelId"];
-
-        if (!ulong.TryParse(channelIdText, out var channelId))
-        {
-            logger.LogWarning(
-                "Discord StatusChannelId is not configured.");
-
-            return;
-        }
-
-        if (discordClient.GetChannel(channelId)
-            is not IMessageChannel channel)
-        {
-            // This can happen if Discord has not finished connecting yet,
-            // or if the configured channel does not exist or is inaccessible.
-            logger.LogWarning(
-                "Discord status channel {ChannelId} could not be found.",
-                channelId);
-
-            return;
-        }
-
-        var message = online
-            ? $"🟢 **{serverName} ONLINE**\n서버가 다시 응답하기 시작했습니다."
-            : $"🔴 **{serverName} OFFLINE**\n서버가 응답하지 않습니다.";
-
-        await channel.SendMessageAsync(message);
-
-        logger.LogInformation(
+            logger.LogInformation(
             "Server status changed: {ServerName} = {State}",
-            serverName,
-            online ? "ONLINE" : "OFFLINE");
+            status.Name,
+            status.Online ? "ONLINE" : "OFFLINE");
+        }
+
+        // Update periodically, but refresh immediately when a server changes state.
+        await dashboardService.UpdateAsync(
+            statuses,
+            force: stateChanged,
+            cancellationToken);
     }
 }

@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>52c5b814-458c-4b9f-9da8-2683dcc18ca6</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UserSecretsId>52c5b814-458c-4b9f-9da8-2683dcc18ca6</UserSecretsId>
+		<Version>0.2.0</Version>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="3.20.1" />
-  </ItemGroup>
-
+	<ItemGroup>
+		<PackageReference Include="Discord.Net" Version="3.20.1" />
+	</ItemGroup>
 </Project>
